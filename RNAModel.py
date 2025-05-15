@@ -33,7 +33,23 @@ class RNAModel(nn.Module):
         self.outer_product_mean      = OuterProductMean()
         self.pos_encoder             = RelPos(self.config.pairwise_dimension)
 
-        self.use_gradient_checkpoint = self.config.use_grad_checkpoint
+    def forward(self, src, src_mask=None):
+        
+        batch, length = src.shape
+        src           = self.encoder(src)
+        src           = src.reshape(batch, length, -1)
 
-    def forward(self, src, src_mask=None, return_aw=False):
-        pass
+        pairwise_features = self.outer_product_mean(src)
+        pairwise_features = pairwise_features + self.pos_encoder(src)
+
+        for i, layer in enumerate(self.transformer_encoder):
+            src, pairwise_features = 
+            layer(
+                    src, 
+                    pairwise_features, 
+                    src_mask
+                )
+
+        output = self.decoder(src).squeeze(-1) + pairwise_features.mean() * 0
+
+        return output
