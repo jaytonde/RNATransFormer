@@ -1,4 +1,47 @@
+import torch
 import torch.nn as nn 
+
+
+class OuterProductMean(nn.Module):
+    def __init__(self, in_dim=256, dim_msa=32, pairwise_dim=64):
+        super(OuterProductMean, self).__init__()
+        self.proj_down1 = nn.Linear(in_dim, dim_msa)            
+        self.proj_down2 = nn.Linear(dim_msa**2, pairwise_dim)
+
+    def forward(self, seq_rep):
+        seq_rep       = self.proj_down1(seq_rep)                                # Reducing dimension from 256->32
+        outer_product = torch.einsum('bid,bjc -> bijcd', seq_rep, seq_rep)      # Einstein summation : calculate pairwise interactions between sequence positions
+        outer_product = rearrange(outer_product, 'b i j c d -> b i j (c d)')    # Rearranges the outer product tensor into shape (batch, seq_len, seq_len, dim_msa^2) using einops
+        outer_product = self.proj_down2(outer_product)                          # Maps flattened dimension (32^2=1024) to pairwise_dim=64 via proj_down2
+
+        return outer_product
+
+
+
+class OuterProductMeanSimple(nn.Module):
+
+    def __init__(self, in_dim=256, dim_msa=32, pairwise_dim=64):
+        super(OuterProductMean, self).__init__()
+        self.proj_down1 = nn.Linear(in_dim, dim_msa)            
+        self.proj_down2 = nn.Linear(dim_msa**2, pairwise_dim)
+
+    def forward(self, seq_rep):
+        seq_rep = self.proj_down1(seq_rep)  # (batch, seq_len, dim_msa)
+        batch_size, seq_len, dim = seq_rep.shape
+        
+        # Initialize output tensor
+        outer_product = torch.zeros(batch_size, seq_len, seq_len, dim, dim)
+        
+        # Iterate over batches and sequence positions
+        for b in range(batch_size):
+            for i in range(seq_len):
+                for j in range(seq_len):
+                    vec_i = seq_rep[b, i]  # (dim_msa,)
+                    vec_j = seq_rep[b, j]  # (dim_msa,)
+                    outer_product[b, i, j] = torch.outer(vec_i, vec_j)  # (dim_msa, dim_msa)
+        
+        outer_product = rearrange(outer_product, 'b i j c d -> b i j (c d)')
+        return self.proj_down2(outer_product)
 
 class RNAModel(nn.Module):
 
