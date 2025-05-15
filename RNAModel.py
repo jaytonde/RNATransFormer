@@ -50,6 +50,6 @@ class RNAModel(nn.Module):
                     src_mask
                 )
 
-        output = self.decoder(src).squeeze(-1) + pairwise_features.mean() * 0
+        output = self.decoder(src).squeeze(-1)
 
         return output
