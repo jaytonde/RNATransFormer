@@ -16,8 +16,6 @@ class OuterProductMean(nn.Module):
 
         return outer_product
 
-
-
 class OuterProductMeanSimple(nn.Module):
 
     def __init__(self, in_dim=256, dim_msa=32, pairwise_dim=64):
@@ -42,6 +40,27 @@ class OuterProductMeanSimple(nn.Module):
         
         outer_product = rearrange(outer_product, 'b i j c d -> b i j (c d)')
         return self.proj_down2(outer_product)
+
+
+class RelPos(nn.Module):
+
+    def __init__(self, dim=64):
+        self.linear = nn.Linear(17, dim)
+
+    def forward(self, src):
+        device      = src.device
+        L           = src.shape[1]
+        res_id      = torch.arange(L).to(device).unsqueeze(0)           # tensor([[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]], device='cuda:0')
+        bin_values  = torch.arange(-8, 9, device=device)                # tensor([-8, -7, -6, -5, -4, -3, -2, -1,  0,  1,  2,  3,  4,  5,  6,  7,  8], device='cuda:0')
+        d           = res_id[:, :, None] - res_id[:, None, :]           # Symmetric metric
+        bdy         = torch.tensor(8, device=device)                    # tensor(8, device='cuda:0')
+        d           = torch.mininum(torch.maximum(-bdy, d), bdy)        # filtering elements to be the max 8
+        d_onehot    = (d[..., None] == bin_values).float()              # Binarizing the array 1 mean there is relation between those neucliotides and 0 means not.
+
+        assert d_onehot.sum(dim=-1).min() == 1
+        p           = self.linear(d_onehot)                             # Sends binary matrix to the linar layer which learns relative relationships between neucliotide.
+        return p
+        
 
 class RNAModel(nn.Module):
 
