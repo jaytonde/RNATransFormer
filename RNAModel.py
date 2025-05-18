@@ -1,5 +1,15 @@
+import math
 import torch
-import torch.nn as nn 
+
+import torch.nn               as nn
+import torch.nn.functional    as F
+import matplotlib.pyplot      as plt
+import torch.utils.checkpoint as checkpoint
+
+
+from torch                    import einsum
+from einops                   import rearrange, repeat, reduce
+from einops.layers.torch      import Rearrange
 
 
 class OuterProductMean(nn.Module):
@@ -60,8 +70,85 @@ class RelPos(nn.Module):
         p           = self.linear(d_onehot)                             # Sends binary matrix to the linar layer which learns relative relationships between neucliotide.
         return p
 
+class ScaledDotProductAttention(nn.Module):
+    ''' Scaled Dot-Product Attention '''
+
+    def __init__(self, temperature, attn_dropout=0.1):
+        super().__init__()
+        self.temperature = temperature
+        self.dropout = nn.Dropout(attn_dropout)
+
+    def forward(self, q, k, v, mask=None, attn_mask=None):
+        attn     = torch.matmul(q, k.transpose(2, 3))/ self.temperature
+        if mask is not None:
+            attn = attn+mask
+
+        if attn_mask is not None:
+            for i in range(len(attn_mask)):
+                attn_mask[i,0] = attn_mask[i,0].fill_diagonal_(1)
+            attn = attn.float().masked_fill(attn_mask == 0, float('-1e-9'))
+
+        attn   = self.dropout(F.softmax(attn, dim=-1))
+        output = torch.matmul(attn, v)
+        return output, attn
+
+class MultiHeadAttention(nn.Module):
+    ''' Multi-Head Attention module '''
+
+    def __init__(self, d_model, n_head, d_k, d_v, dropout=0.1):
+        super().__init__()
+
+        self.n_head = n_head
+        self.d_k = d_k
+        self.d_v = d_v
+
+        self.w_qs = nn.Linear(d_model, n_head * d_k, bias=False)
+        self.w_ks = nn.Linear(d_model, n_head * d_k, bias=False)
+        self.w_vs = nn.Linear(d_model, n_head * d_v, bias=False)
+        self.fc = nn.Linear(n_head * d_v, d_model, bias=False)
+
+        self.attention = ScaledDotProductAttention(temperature=d_k ** 0.5)
+
+        self.dropout = nn.Dropout(dropout)
+        self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
 
 
+    def forward(self, q, k, v, mask=None,src_mask=None):
+
+        d_k, d_v, n_head = self.d_k, self.d_v, self.n_head
+        sz_b, len_q, len_k, len_v = q.size(0), q.size(1), k.size(1), v.size(1)
+
+        residual = q
+
+        # Pass through the pre-attention projection: b x lq x (n*dv)
+        # Separate different heads: b x lq x n x dv
+        q = self.w_qs(q).view(sz_b, len_q, n_head, d_k)
+        k = self.w_ks(k).view(sz_b, len_k, n_head, d_k)
+        v = self.w_vs(v).view(sz_b, len_v, n_head, d_v)
+
+        # Transpose for attention dot product: b x n x lq x dv
+        q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
+
+        if mask is not None:
+            mask = mask  # For head axis broadcasting
+
+        if src_mask is not None:
+            src_mask=src_mask[:,:q.shape[2]].unsqueeze(-1).float()
+            attn_mask=torch.matmul(src_mask,src_mask.permute(0,2,1))#.long()
+            attn_mask=attn_mask.unsqueeze(1)
+            q, attn = self.attention(q, k, v, mask=mask,attn_mask=attn_mask)
+        else:
+            q, attn = self.attention(q, k, v, mask=mask)
+  
+        # Transpose to move the head dimension back: b x lq x n x dv
+        # Combine the last two dimensions to concatenate all the heads together: b x lq x (n*dv)
+        q = q.transpose(1, 2).contiguous().view(sz_b, len_q, -1)
+        q = self.dropout(self.fc(q))
+        q += residual
+
+        q = self.layer_norm(q)
+
+        return q, attn
 
 class ConvTransformerEncoderLayer(nn.Module):
     def __init__(self, d_model, nhead, dim_feedforward, pairwise_dim, dropout=0.1, k=3):
@@ -100,18 +187,28 @@ class ConvTransformerEncoderLayer(nn.Module):
             nn.Linear(pairwise_dimension * 4, pairwise_dimension)
         )
 
-
-
-
-
-
-
-
-
     def forward(self, src , pairwise_features, src_mask=None):
-        pass
+        src     = src * src.src_mask.float().unsqueeze(-1)
 
+        src     = src * self.conv(src.permute(0,2,1)).permute(0,2,1)
+        src     = self.norm3(src)
 
+        pairwise_bias  = self.pairwise2heads(self.pairwise_norm(pairwise_features)).permute(0,3,1,2)
+        src2, attention_weights = self.self_attn(src, src, src, mask=pairwise_bias, src_mask=src_mask)
+
+        src = src + self.dropout1(src2)
+        src = self.norm1(src)
+        src2 = self.linear2(self.dropout(self.activation(self.linear(src))))
+        src  = src + self.dropout2(src2)
+        src = self.norm2(src)
+
+        pairwise_features=pairwise_features+self.outer_product_mean(src)
+        pairwise_features=pairwise_features+self.pair_dropout_out(self.triangle_update_out(pairwise_features,src_mask))
+        pairwise_features=pairwise_features+self.pair_dropout_in(self.triangle_update_in(pairwise_features,src_mask))
+
+        pairwise_features=pairwise_features+self.pair_transition(pairwise_features)
+
+        return src,pairwise_features
 
 class RNAModel(nn.Module):
 
