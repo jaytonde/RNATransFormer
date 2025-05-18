@@ -1,6 +1,6 @@
 import yaml
 import logging
-form RNAModel import RNAModel
+from   RNAModel import RNAModel
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
@@ -13,3 +13,10 @@ if __name__ == "__main__":
     logger.info("Loading model...")
     model  = RNAModel(logger, config)
     logger.info("Model loaded successfully")
+
+    logger.info("Inference the model for sample input")
+    x         = torch.ones(4,128).long().cuda()
+    mask      = torch.ones(4,128).long().cuda()
+    output    = model(x,src_mask=mask)
+    logger.info(f"Model response : {output}")
+    logger.info("Model Inference completed.")
