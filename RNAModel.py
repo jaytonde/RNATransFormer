@@ -41,7 +41,6 @@ class OuterProductMeanSimple(nn.Module):
         outer_product = rearrange(outer_product, 'b i j c d -> b i j (c d)')
         return self.proj_down2(outer_product)
 
-
 class RelPos(nn.Module):
 
     def __init__(self, dim=64):
@@ -60,7 +59,59 @@ class RelPos(nn.Module):
         assert d_onehot.sum(dim=-1).min() == 1
         p           = self.linear(d_onehot)                             # Sends binary matrix to the linar layer which learns relative relationships between neucliotide.
         return p
-        
+
+
+
+
+class ConvTransformerEncoderLayer(nn.Module):
+    def __init__(self, d_model, nhead, dim_feedforward, pairwise_dim, dropout=0.1, k=3):
+        super(ConvTransformerEncoderLayer, self).__init__()
+
+        self.self_attn = MultiHeadAttention(d_model, nhead, d_model//nhead, d_model//nhead, dropout=dropout)
+
+        self.linear1        = nn.Linear(d_model, dim_feedforward)
+        self.dropout        = nn.Dropout(dropout)
+        self.linear2        = nn.Linear(dim_feedforward, d_model)
+
+        self.norm1          = nn.LayerNorm(d_model)
+        self.norm2          = nn.LayerNorm(d_model)
+        self.norm3          = nn.LayerNorm(d_model)
+
+        self.dropout1       = nn.Dropout(dropout)
+        self.dropout2       = nn.Dropout(dropout)
+        self.dropout3       = nn.Dropout(dropout)
+
+        self.pairwise2heads = nn.Linear(pairwise_dimension, nhead, bias=False)
+        self.pairwise_norm  = nn.LayerNorm(pairwise_dimension)
+        self.activation     = nn.GELU()
+
+        self.triangle_update_out = TriangleMultiplicativeModule(dim=pairwise_dimension, mix='outgoing')
+        self.triangle_update_in  = TriangleMultiplicativeModule(dim=pairwise_dimension, mix='ingoing')
+
+        self.pair_dropout_out    = DropoutRowwise(dropout)
+        self.pair_dropout_in     = DropoutRowwise(dropout)
+
+        self.outer_product_mean = OuterProductMean(in_dim=d_model, pairwise_dim=pairwise_dimension)
+
+        self.pair_transition    = nn.Sequential(
+            nn.LayerNorm(pairwise_dimension),
+            nn.Linear(pairwise_dimension, pairwise_dimension * 4),
+            nn.ReLU(inplace=True),
+            nn.Linear(pairwise_dimension * 4, pairwise_dimension)
+        )
+
+
+
+
+
+
+
+
+
+    def forward(self, src , pairwise_features, src_mask=None):
+        pass
+
+
 
 class RNAModel(nn.Module):
 
