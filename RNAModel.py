@@ -13,15 +13,8 @@ from einops.layers.torch      import Rearrange
 
 
 def init_weights(m):
-    #print(m)
     if m is not None and isinstance(m, nn.Linear):
         pass
-        # torch.nn.init.xavier_uniform_(m.weight)
-        # #torch.nn.init.xavier_normal(m.bias)
-        # try:
-        #     m.bias.data.fill_(0.01)
-        # except:
-        #     pass
 
 class OuterProductMean(nn.Module):
     def __init__(self, in_dim=256, dim_msa=32, pairwise_dim=64):
