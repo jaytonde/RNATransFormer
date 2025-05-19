@@ -4,7 +4,7 @@
 Code of RNA transformer model. This Transformer model can be used to prdict RNA 3D structure if you have an RNA sequence. Model gives output as 3D point x,y,z for each neucliotide from the RNA sequence given to the model.
 
 
-### Model Weights intialization
+### Model Weights intialization.
 #### Initially before training the model on RNA data. Weights initialization will work as following
 1. Linear Layer's : PyTorch uses a method called Kaiming uniform initialization by default
 2. Embeddings     : For the nn.Embedding layer, PyTorch initializes the weights from a uniform distribution.
@@ -18,3 +18,9 @@ Code of RNA transformer model. This Transformer model can be used to prdict RNA 
 #### 2. Outer Product Mean module :
 - Original outer product mean module was implemented using einstein equation of matrix multiplication.
 - We have updated it to do the same using simple metric multiplications.
+
+### Hardware used for model training.
+
+### Model training insights.
+
+### Model results after training completed.
