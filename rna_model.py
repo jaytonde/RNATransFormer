@@ -10,11 +10,20 @@ import torch.utils.checkpoint as checkpoint
 from torch                    import einsum
 from einops                   import rearrange, repeat, reduce
 from einops.layers.torch      import Rearrange
+from dropout                  import *
 
 
 def init_weights(m):
     if m is not None and isinstance(m, nn.Linear):
         pass
+
+
+def exists(val):
+    return val is not None
+
+def default(val, d):
+    return val if exists(val) else d
+
 
 class OuterProductMean(nn.Module):
     def __init__(self, in_dim=256, dim_msa=32, pairwise_dim=64):
@@ -58,6 +67,7 @@ class OuterProductMeanSimple(nn.Module):
 class RelPos(nn.Module):
 
     def __init__(self, dim=64):
+        super(RelPos, self).__init__()
         self.linear = nn.Linear(17, dim)
 
     def forward(self, src):
@@ -67,7 +77,7 @@ class RelPos(nn.Module):
         bin_values  = torch.arange(-8, 9, device=device)                # tensor([-8, -7, -6, -5, -4, -3, -2, -1,  0,  1,  2,  3,  4,  5,  6,  7,  8], device='cuda:0')
         d           = res_id[:, :, None] - res_id[:, None, :]           # Symmetric metric
         bdy         = torch.tensor(8, device=device)                    # tensor(8, device='cuda:0')
-        d           = torch.mininum(torch.maximum(-bdy, d), bdy)        # filtering elements to be the max 8
+        d           = torch.minimum(torch.maximum(-bdy, d), bdy)        # filtering elements to be the max 8
         d_onehot    = (d[..., None] == bin_values).float()              # Binarizing the array 1 mean there is relation between those neucliotides and 0 means not.
 
         assert d_onehot.sum(dim=-1).min() == 1
@@ -219,7 +229,7 @@ class TriangleMultiplicativeModule(nn.Module):
         return self.to_out(out)
 
 class ConvTransformerEncoderLayer(nn.Module):
-    def __init__(self, d_model, nhead, dim_feedforward, pairwise_dim, dropout=0.1, k=3):
+    def __init__(self, d_model, nhead, dim_feedforward, pairwise_dimension, dropout=0.1, k=3):
         super(ConvTransformerEncoderLayer, self).__init__()
 
         self.self_attn = MultiHeadAttention(d_model, nhead, d_model//nhead, d_model//nhead, dropout=dropout)
@@ -240,6 +250,8 @@ class ConvTransformerEncoderLayer(nn.Module):
         self.pairwise_norm  = nn.LayerNorm(pairwise_dimension)
         self.activation     = nn.GELU()
 
+        self.conv=nn.Conv1d(d_model,d_model,k,padding=k//2)
+
         self.triangle_update_out = TriangleMultiplicativeModule(dim=pairwise_dimension, mix='outgoing')
         self.triangle_update_in  = TriangleMultiplicativeModule(dim=pairwise_dimension, mix='ingoing')
 
@@ -256,7 +268,7 @@ class ConvTransformerEncoderLayer(nn.Module):
         )
 
     def forward(self, src , pairwise_features, src_mask=None):
-        src     = src * src.src_mask.float().unsqueeze(-1)
+        src     = src * src_mask.float().unsqueeze(-1)
 
         src     = src * self.conv(src.permute(0,2,1)).permute(0,2,1)
         src     = self.norm3(src)
@@ -266,7 +278,7 @@ class ConvTransformerEncoderLayer(nn.Module):
 
         src = src + self.dropout1(src2)
         src = self.norm1(src)
-        src2 = self.linear2(self.dropout(self.activation(self.linear(src))))
+        src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
         src  = src + self.dropout2(src2)
         src = self.norm2(src)
 
@@ -286,21 +298,19 @@ class RNAModel(nn.Module):
         self.logger = logger
         self.config = config
 
-        self.nhid   = config.ninp * 4
+        self.config.nhid   = config.ninp * 4
 
         self.transformer_encoder = []
-        self.logger(f"constructing {self.config.nlayers} ConvTransformerEncoderLayers")
+        self.logger.warning(f"constructing {self.config.nlayers} ConvTransformerEncoderLayers")
 
         for i in range(self.config.nlayers):
-            sub_layer = ConvTransformerEncoderLayer
-                            (    
-                                d_model                  = config.ninp, 
-                                nhead                    = config.nhead,
-                                dim_feedforward          = nhid, 
-                                pairwise_dimension       = config.pairwise_dimension,
-                                use_triangular_attention = config.use_triangular_attention,
-                                dropout                  = config.dropout, 
-                                k                        = k
+            sub_layer = ConvTransformerEncoderLayer(    
+                                d_model                  = self.config.ninp, 
+                                nhead                    = self.config.nhead,
+                                dim_feedforward          = self.config.nhid, 
+                                pairwise_dimension       = self.config.pairwise_dimension,
+                                dropout                  = self.config.dropout, 
+                                k                        = self.config.k
                             )
             self.transformer_encoder.append(sub_layer)
 
@@ -321,8 +331,7 @@ class RNAModel(nn.Module):
         pairwise_features = pairwise_features + self.pos_encoder(src)
 
         for i, layer in enumerate(self.transformer_encoder):
-            src, pairwise_features = 
-            layer(
+            src, pairwise_features = layer(
                     src, 
                     pairwise_features, 
                     src_mask

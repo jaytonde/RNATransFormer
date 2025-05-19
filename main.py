@@ -1,6 +1,20 @@
 import yaml
+import torch
 import logging
-from   RNAModel import RNAModel
+from rna_model import RNAModel
+
+class Config:
+    def __init__(self, **entries):
+        self.__dict__.update(entries)
+        self.entries=entries
+    def print(self):
+        print(self.entries)
+
+def load_config_from_yaml(file_path):
+    with open(file_path, 'r') as file:
+        config = yaml.safe_load(file)
+    return Config(**config)
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
@@ -15,8 +29,8 @@ if __name__ == "__main__":
     logger.info("Model loaded successfully")
 
     logger.info("Inference the model for sample input")
-    x         = torch.ones(4,128).long().cuda()
-    mask      = torch.ones(4,128).long().cuda()
+    x         = torch.ones(4,128).long()
+    mask      = torch.ones(4,128).long()
     output    = model(x,src_mask=mask)
     logger.info(f"Model response : {output}")
     logger.info("Model Inference completed.")
