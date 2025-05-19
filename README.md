@@ -11,6 +11,10 @@ Code of RNA transformer model. This Transformer can be used to prdict RNA 3D str
 3. LayerNorm : nn.LayerNorm layers initialize their weights to 1 and biases to 0 by default.
 
 ### Key changes in the original model architecture.
-#### 
+#### 1. Model decoder layer :
 - Original RibonanzaNet has decoder output dimensions as 2 cause it was used to predict the reactivity of the neucleiotides.
 - Updating it to 3 cause we are training the model for 3D RNA structure predicition. Our new model will output 3 logits for x,y,z respectively for 3D dimensions.
+
+#### 2. Outer product Mean module :
+- Original outer product mean module was implemented using einstein equation of matrix multiplication.
+- We have updated it to do the same using simple metric multiplications.
