@@ -1,7 +1,7 @@
 ![Alt text](image.png)
 
 # RNATransFormer
-Code of RNA transformer model. This Transformer can be used to prdict RNA 3D strcture if you have an RNA sequence. Model gives output as 3D point x,y,z for each neucliotide from the RNA sequence.
+Code of RNA transformer model. This Transformer can be used to prdict RNA 3D structure if you have an RNA sequence. Model gives output as 3D point x,y,z for each neucliotide from the RNA sequence.
 
 
 ### Model Weights intialization
