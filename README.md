@@ -6,9 +6,9 @@ Code of RNA transformer model. This Transformer model can be used to prdict RNA 
 ---
 ### 1. What is different in this model architecture compared to generic transformer architecture.
 The goal to study this model architecture is to understand the way we can model the RNA sequences using transformer architecture. We are already famillier with model english language using transformer encoder but this something curious to explore the RNA sequence modeling using transfomer. Except generic trasnformer architecture described in "Attention is All You Need" paper this RNAModel has following major differences which helps to model RNA sequences using trasnformer.
-#### Outer Product Mean
+#### 1.1 Outer Product Mean
 Outer product mean helps to highlight the potential interaction between pairwise neucliotides in the RNA sequences.
-#### Triangular multiplicative module
+#### 1.2 Triangular multiplicative module
 This module helps to estamblish the relationship between all the other neucleiotides.
 This two techniques described well in blog post here. : 
 
