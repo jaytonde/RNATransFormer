@@ -20,6 +20,14 @@ Code of RNA transformer model. This Transformer model can be used to prdict RNA 
 - We have updated it to do the same using simple metric multiplications.
 
 ### Hardware used for model training.
+## Machine GPU Specification
+
+| Specification       | Value                        |
+|---------------------|-----------------------------|
+| **GPU Model**       | Quadro RTX 8000             |
+| **CUDA Version**    | 12.2                        |
+| **GPU Memory**      | 49152 MiB (48 GB)           |
+
 
 ### Model training insights.
 
