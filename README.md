@@ -20,7 +20,6 @@ Code of RNA transformer model. This Transformer model can be used to prdict RNA 
 - We have updated it to do the same using simple metric multiplications.
 
 ### Hardware used for model training.
-## Machine GPU Specification
 
 | Specification       | Value                        |
 |---------------------|-----------------------------|
