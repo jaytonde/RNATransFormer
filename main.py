@@ -29,8 +29,8 @@ if __name__ == "__main__":
     logger.info("Model loaded successfully")
 
     logger.info("Inference the model for sample input")
-    x         = torch.ones(4,128).long()
-    mask      = torch.ones(4,128).long()
+    x         = torch.ones(1,6).long()
+    mask      = torch.ones(1,6).long()
     output    = model(x,src_mask=mask)
     logger.info(f"Model response : {output}")
     logger.info("Model Inference completed.")

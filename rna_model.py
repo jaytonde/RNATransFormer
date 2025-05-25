@@ -77,8 +77,8 @@ class RelPos(nn.Module):
         bin_values  = torch.arange(-8, 9, device=device)                # tensor([-8, -7, -6, -5, -4, -3, -2, -1,  0,  1,  2,  3,  4,  5,  6,  7,  8], device='cuda:0')
         d           = res_id[:, :, None] - res_id[:, None, :]           # Symmetric metric
         bdy         = torch.tensor(8, device=device)                    # tensor(8, device='cuda:0')
-        d           = torch.minimum(torch.maximum(-bdy, d), bdy)        # filtering elements to be the max 8
-        d_onehot    = (d[..., None] == bin_values).float()              # Binarizing the array 1 mean there is relation between those neucliotides and 0 means not.
+        d           = torch.minimum(torch.maximum(-bdy, d), bdy)        # filtering elements to be the max 8 and min -8
+        d_onehot    = (d[..., None] == bin_values).float()              # Binarizing the array 1 mean there is relation between those neucliotides and 0 means not. element wise comparision.
 
         assert d_onehot.sum(dim=-1).min() == 1
         p           = self.linear(d_onehot)                             # Sends binary matrix to the linar layer which learns relative relationships between neucliotide.
@@ -109,14 +109,14 @@ class ScaledDotProductAttention(nn.Module):
 class MultiHeadAttention(nn.Module):
     ''' Multi-Head Attention module '''
 
-    def __init__(self, d_model, n_head, d_k, d_v, dropout=0.1):
+    def __init__(self, d_model, n_head, d_k, d_v, dropout=0.1): #d_model = 256, n_head=8, d_k=32, d_v=32
         super().__init__()
 
         self.n_head = n_head
         self.d_k = d_k
         self.d_v = d_v
 
-        self.w_qs = nn.Linear(d_model, n_head * d_k, bias=False)
+        self.w_qs = nn.Linear(d_model, n_head * d_k, bias=False) # all heads together weight matrix
         self.w_ks = nn.Linear(d_model, n_head * d_k, bias=False)
         self.w_vs = nn.Linear(d_model, n_head * d_v, bias=False)
         self.fc = nn.Linear(n_head * d_v, d_model, bias=False)
@@ -136,9 +136,13 @@ class MultiHeadAttention(nn.Module):
 
         # Pass through the pre-attention projection: b x lq x (n*dv)
         # Separate different heads: b x lq x n x dv
-        q = self.w_qs(q).view(sz_b, len_q, n_head, d_k)
-        k = self.w_ks(k).view(sz_b, len_k, n_head, d_k)
-        v = self.w_vs(v).view(sz_b, len_v, n_head, d_v)
+        qw = self.w_qs(q)
+        kw = self.w_ks(k)
+        vw = self.w_vs(v)
+
+        q = qw.view(sz_b, len_q, n_head, d_k) 
+        k = kw.view(sz_b, len_k, n_head, d_k)
+        v = vw.view(sz_b, len_v, n_head, d_v)
 
         # Transpose for attention dot product: b x n x lq x dv
         q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
@@ -165,6 +169,7 @@ class MultiHeadAttention(nn.Module):
         return q, attn
 
 class TriangleMultiplicativeModule(nn.Module):
+    
     def __init__(
         self,
         *,
@@ -200,11 +205,11 @@ class TriangleMultiplicativeModule(nn.Module):
         self.to_out = nn.Linear(hidden_dim, dim)
 
     def forward(self, x, src_mask):
-        src_mask=src_mask.unsqueeze(-1).float()
-        mask = torch.matmul(src_mask,src_mask.permute(0,2,1))
+        src_mask = src_mask.unsqueeze(-1).float()                               # Add dimension to the last 
+        mask     = torch.matmul(src_mask,src_mask.permute(0,2,1))               # Matrix multiplication to get the mask for the feature map
         assert x.shape[1] == x.shape[2], 'feature map must be symmetrical'
         if exists(mask):
-            mask = rearrange(mask, 'b i j -> b i j ()')
+            mask = rearrange(mask, 'b i j -> b i j ()') # unsqueeze(-1) operation
 
         x = self.norm(x)
 
@@ -268,25 +273,29 @@ class ConvTransformerEncoderLayer(nn.Module):
         )
 
     def forward(self, src , pairwise_features, src_mask=None):
-        src     = src * src_mask.float().unsqueeze(-1)
+        src                     = src * src_mask.float().unsqueeze(-1)
+        conv_ops                = self.conv(src.permute(0,2,1)).permute(0,2,1)
+        src                     = src * conv_ops
+        src                     = self.norm3(src) # shape(1,6,256), Normalization on last dimension -> 256
 
-        src     = src * self.conv(src.permute(0,2,1)).permute(0,2,1)
-        src     = self.norm3(src)
-
-        pairwise_bias  = self.pairwise2heads(self.pairwise_norm(pairwise_features)).permute(0,3,1,2)
+        pairwise_norm           = self.pairwise_norm(pairwise_features) # shape(1,6,6,64), Normalization on last dimension -> 64
+        pairwise_bias           = self.pairwise2heads(pairwise_norm).permute(0,3,1,2) # 64 -> 8 mapping by linear layer in pairwise2heads function and then just changing the dimensions.
         src2, attention_weights = self.self_attn(src, src, src, mask=pairwise_bias, src_mask=src_mask)
 
-        src = src + self.dropout1(src2)
-        src = self.norm1(src)
-        src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
-        src  = src + self.dropout2(src2)
-        src = self.norm2(src)
+        src                     = src + self.dropout1(src2)
+        src                     = self.norm1(src)
+        linear1                 = self.linear1(src) # shape(1,6,1024)
+        active                  = self.activation(linear1) # shape(1,6,256) #TODO
 
-        pairwise_features=pairwise_features+self.outer_product_mean(src)
-        pairwise_features=pairwise_features+self.pair_dropout_out(self.triangle_update_out(pairwise_features,src_mask))
-        pairwise_features=pairwise_features+self.pair_dropout_in(self.triangle_update_in(pairwise_features,src_mask))
+        src2                    = self.linear2(self.dropout(active)) # shape(1,6,256)
+        src                     = src + self.dropout2(src2)
+        src                     = self.norm2(src)
 
-        pairwise_features=pairwise_features+self.pair_transition(pairwise_features)
+        #refining pairwise features
+        pairwise_features       = pairwise_features+self.outer_product_mean(src) # calculating pairwise features again after applying multi head attention.
+        pairwise_features       = pairwise_features+self.pair_dropout_out(self.triangle_update_out(pairwise_features,src_mask))
+        pairwise_features       = pairwise_features+self.pair_dropout_in(self.triangle_update_in(pairwise_features,src_mask))
+        pairwise_features       = pairwise_features+self.pair_transition(pairwise_features)
 
         return src,pairwise_features
 
@@ -327,8 +336,9 @@ class RNAModel(nn.Module):
         src           = self.encoder(src)
         src           = src.reshape(batch, length, -1)
 
-        pairwise_features = self.outer_product_mean(src)
-        pairwise_features = pairwise_features + self.pos_encoder(src)
+        pairwise_features = self.outer_product_mean(src)    # Calculating pairwise features using outer product mean. The output shape is (B, L, L, 64) where B is batch size and L is the length of the sequence.  
+        pos_encoder       = self.pos_encoder(src)           # Generating positional encoding for the input sequence. The output shape is (B, L, L, 64).
+        pairwise_features = pairwise_features + pos_encoder # Adding two metrics of the shape (B, L, L, 64) together.
 
         for i, layer in enumerate(self.transformer_encoder):
             src, pairwise_features = layer(
