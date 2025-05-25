@@ -11,7 +11,7 @@ The goal of studying this model architecture is to understand the way we can mod
 - Outer product mean helps to learn the pairwise relationships between elements from the RNA sequence.
 - It highlights the complementarity and dependency relationships between neucleiotide.
 - It also do expansion and compression of the features space to understand the complex patterns.
-- 
+  
 #### 1.2 Triangular multiplicative module
 - This module helps to enrich pairwise representations by incorporating triangular relationships between neucleiotides.
 - It helps to understand the non-local interactions.
