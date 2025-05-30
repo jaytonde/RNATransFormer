@@ -45,8 +45,8 @@ The goal of studying this model architecture is to understand the way we can mod
 | **GPU Memory**      | 49152 MiB (48 GB)           |
 ---
 
-### 5. Model training insights.
-| experiment name     | No. of samples in training  | LB score |
+### 5. Model experiments and evaluation scores.
+| experiment name     | No. of samples in training  | LB score(TM-Score) |
 |---------------------|-----------------------------|----------|
 |  experiment 1       | 844                         | 0.161    |
 |  experiment 2       | 10000                       | 0.279    |
