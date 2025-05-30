@@ -38,6 +38,7 @@ The goal of studying this model architecture is to understand the way we can mod
 ### 4. Dataset used : 
 For first experiment i used the training data of kaggle competition itself here is the ([Link](https://www.kaggle.com/competitions/stanford-rna-3d-folding)).
 For second experiment i used 10000 samples from 4lakh publically available datasets. It took around 24hrs to train the model on this 10000 samples.
+
 ---
 
 ### 5. Hardware used for model training.
@@ -47,6 +48,7 @@ For second experiment i used 10000 samples from 4lakh publically available datas
 | **GPU Model**       | Quadro RTX 8000             |
 | **CUDA Version**    | 12.2                        |
 | **GPU Memory**      | 49152 MiB (48 GB)           |
+
 ---
 
 ### 6. Model experiments and evaluation scores.
