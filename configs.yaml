@@ -3,8 +3,10 @@ learning_rate                  : 0.001         # The learning rate for the optim
 batch_size                     : 2             # Number of samples per batch
 test_batch_size                : 8             # Number of samples per batch
 epochs                         : 40            # Total training epochs
+cos_epoch                      : 30
 optimizer                      : "ranger"      # Optimization algorithm
 dropout                        : 0.05          # Dropout regularization rate
+ninp                           : 256
 weight_decay                   : 0.0001
 k                              : 9
 ninp                           : 256
@@ -18,3 +20,14 @@ gradient_accumulation_steps    : 2
 use_triangular_attention       : false
 pairwise_dimension             : 64
 use_grad_checkpoint            : false
+max_len_filter                 : 9999999
+min_len_filter                 : 10
+cutoff_date                    : "2020-01-01"
+test_cutoff_date               : "2022-05-01"
+max_len                        : 384
+train_sequences_path           : "data/ext_sequences.parquet"
+train_labels_path              : "data/ext_labels.parquet"
+mode                           : "train"
+experiment_name                : "rna_exp_02"
+model_save_path                : "models/"
+batch_size                     : 1
