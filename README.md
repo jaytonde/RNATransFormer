@@ -49,8 +49,4 @@ The goal of studying this model architecture is to understand the way we can mod
 | experiment name     | No. of samples in training  | LB score |
 |---------------------|-----------------------------|----------|
 |  experiment 1       | 844                         | 0.161    |
-|  experiment 2       | 4346                        |          |
-|  experiment 3       |                             |          |
-
----
-### 6. Model results after training completed.
+|  experiment 2       | 10000                       | 0.279    |
