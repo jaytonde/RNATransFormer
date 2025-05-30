@@ -35,8 +35,12 @@ The goal of studying this model architecture is to understand the way we can mod
 - Original outer product mean module was implemented using einstein equation of matrix multiplication.
 - We have updated it to do the same using simple metric multiplications.
 ---
+### 4. Dataset used : 
+For first experiment i used the training data of kaggle competition itself here is the ([Link](https://www.kaggle.com/competitions/stanford-rna-3d-folding)).
+For second experiment i used 10000 samples from 4lakh publically available datasets. It took around 24hrs to train the model on this 10000 samples.
+---
 
-### 4. Hardware used for model training.
+### 5. Hardware used for model training.
 
 | Specification       | Value                        |
 |---------------------|-----------------------------|
@@ -45,8 +49,8 @@ The goal of studying this model architecture is to understand the way we can mod
 | **GPU Memory**      | 49152 MiB (48 GB)           |
 ---
 
-### 5. Model experiments and evaluation scores.
-| experiment name     | No. of samples in training  | LB score(TM-Score) |
+### 6. Model experiments and evaluation scores.
+| Experiment Name     | No. of samples in training  | LB score(TM-Score) |
 |---------------------|-----------------------------|----------|
-|  experiment 1       | 844                         | 0.161    |
-|  experiment 2       | 10000                       | 0.279    |
+|  Experiment 1       | 844                         | 0.161    |
+|  Experiment 2       | 10000                       | 0.279    |
