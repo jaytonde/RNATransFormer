@@ -36,8 +36,8 @@ The goal of studying this model architecture is to understand the way we can mod
 - We have updated it to do the same using simple metric multiplications.
 ---
 ### 4. Dataset used : 
-For first experiment i used the training data of kaggle competition itself here is the ([Link](https://www.kaggle.com/competitions/stanford-rna-3d-folding)).
-For second experiment i used 10000 samples from 4lakh publically available datasets. It took around 24hrs to train the model on this 10000 samples.
+For first experiment I used the training data of kaggle competition itself here is the ([Link](https://www.kaggle.com/competitions/stanford-rna-3d-folding)).
+For second experiment I used 10,000 samples from publically available dataset of 4 lakh RNA sequences. It took around 24 hrs. to train the model on this 10000 samples.
 
 ---
 
