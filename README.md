@@ -56,3 +56,7 @@ For second experiment I used 10,000 samples from publically available dataset of
 |---------------------|-----------------------------|----------|
 |  Experiment 1       | 844                         | 0.161    |
 |  Experiment 2       | 10000                       | 0.279    |
+
+### 7. References
+1. https://github.com/Shujun-He/RibonanzaNet.
+2. https://www.kaggle.com/competitions/stanford-rna-3d-folding.
