@@ -16,7 +16,7 @@ The goal of studying this model architecture is to understand the way we can mod
 - This module helps to enrich pairwise representations by incorporating triangular relationships between neucleiotides.
 - It helps to understand the non-local interactions.
 
-  This two techniques described well in blog post here.
+  This two techniques described well in blog post here. ([Link](https://jaydevtonde.substack.com/p/rna-transformer))
 ---
 
 ### 2. Model Weights intialization.
